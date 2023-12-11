@@ -4,11 +4,15 @@ import time
 import csv
 
 
-csv_directory = ""  # change to directory of csv file
+CSV_DIRECTORY = ""  # change to directory of csv file
+IMU_PORT = ''  # change to system-specific port
+BAUDRATE = 115200  # change to imu-specific baudrate
+# BT_PORT = ''
+# BT_BAUDRATE = 115200
 
 # CREATING AN INSTANCE OF THE WITMOTION CLASS:
-wm = IMU('/dev/cu.usbserial-120', baudrate=115200)  # NOTE - CHANGE COM PORT & BAUDRATE TO SYSTEM-SPECIFIC
-# wm = IMU('/dev/cu.usbserial-1120', baudrate=115200)  # use this for bluetooth sensor
+wm = IMU(IMU_PORT, baudrate=BAUDRATE)  # NOTE - CHANGE COM PORT & BAUDRATE TO SYSTEM-SPECIFIC
+# wm = IMU(BT_PORT, baudrate=BT_BAUDRATE)  # use this for bluetooth sensor
 
 
 # SENSOR INITIALIZATION & CALIBRATION FUNCTION:
@@ -30,7 +34,7 @@ def calibrate_sensor():
 def record_data():
 
     # Appending Sensor Data to CSV File:
-    with open(csv_directory, mode='a') as IMU_SenorData:
+    with open(CSV_DIRECTORY, mode='a') as IMU_SenorData:
 
         # Specifying Column Headings:
         fieldnames = ['TimeStamp', 'AngleX', 'AngleY', 'AngleZ', 'AccelerationX', 'AccelerationY', 'AccelerationZ']

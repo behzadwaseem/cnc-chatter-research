@@ -6,14 +6,16 @@ import time
 import csv
 
 # FILE TO STORE DATA
-CNC_DATAFILE = ''
-IMU_PORT = ''  # change to system-specific port
+CNC_DATAFILE = ''  # change to desired file for data storing
+
+# SENSOR SETTINGS:
+WIRED_PORT = ''  # change to system-specific port
 BAUDRATE = 115200  # change to imu-specific baudrate
 # BT_PORT = ''
 # BT_BAUDRATE = 115200
 
 # CREATING AN INSTANCE OF THE WITMOTION CLASS:
-wm = IMU(IMU_PORT, baudrate=BAUDRATE)  # NOTE - CHANGE COM PORT & BAUDRATE TO SYSTEM-SPECIFIC
+wm = IMU(WIRED_PORT, baudrate=BAUDRATE)  # use this for wired sensor
 # wm = IMU(BT_PORT, baudrate=BT_BAUDRATE)  # use this for bluetooth sensor
 
 

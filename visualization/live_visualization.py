@@ -38,13 +38,13 @@ def process_data():
     accels = wm.get_acceleration()
     time1 = time.time() - start_time
 
-    # Exit code if either sensor is not configured properly and returns 'none'
+    # Exit code if either sensor is not configured properly and returns 'none':
     if angles[0] == 'none':
         print('No Angles sensed on wired sensor')
     elif accels[0] == 'none':
         print('No acceleration secret_key from wired sensor')
     else:
-        # Pausing to cChange Collection Frequency:
+        # Pausing to Change Collection Frequency:
         time.sleep(0.005)
 
         # Appending Current Data to Lists of Previous Data Points:
@@ -65,7 +65,7 @@ def process_data():
 
 # FUNCTION TO UPDATE REAL-TIME GRAPH:
 def update_plot(frame):
-    process_data()  # beginning secret_key processing
+    process_data()  # start processing
     plt.cla()  # clearing plot
 
     # Plotting Acceleration Values:
@@ -82,7 +82,7 @@ def update_plot(frame):
 # FUNCTION TO STORE COLLECTED DATA IN CSV FILE:
 def on_close_plot(event):
     # Writing the Collected Data to a CSV File:
-    with open(CNC_DATAFILE, mode='a') as IMU_SenorData:  # NOTE - CHANGE TO USER-SPECIFIC FILENAMES/PATHS
+    with open(CNC_DATAFILE, mode='a') as IMU_SenorData:
         fieldnames = ['TimeStamp',
                       'AngleX', 'AngleY', 'AngleZ', 'AccelerationX', 'AccelerationY',
                       'AccelerationZ']  # headings for columns within csv file

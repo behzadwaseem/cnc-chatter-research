@@ -6,18 +6,19 @@ import time
 import csv
 
 # FILE TO STORE DATA
-CNC_DATAFILE = ''
-IMU_PORT = ''  # change to system-specific port
+CNC_DATAFILE = ''  # change to desired file for data storing
+
+# SENSOR SETTINGS:
+WIRED_PORT = ''  # change to system-specific port
 BAUDRATE = 115200  # change to imu-specific baudrate
 # BT_PORT = ''
 # BT_BAUDRATE = 115200
 
 # CREATING AN INSTANCE OF THE WITMOTION CLASS:
-wm = IMU(IMU_PORT, baudrate=BAUDRATE)  # NOTE - CHANGE COM PORT & BAUDRATE TO SYSTEM-SPECIFIC
+wm = IMU(WIRED_PORT, baudrate=BAUDRATE)  # use this for wired sensor
 # wm = IMU(BT_PORT, baudrate=BT_BAUDRATE)  # use this for bluetooth sensor
 
 
-# SENSOR INTIALIZATION & CALIBRATION FUNCTION:
 def live_calibration():
     # CALIBRATING SENSORS:
     wm.set_gyro_automatic_calibration(True)
@@ -31,20 +32,19 @@ def live_calibration():
         time.sleep(1)  # pausing to let sensors calibrate
 
 
-# DATA STORING & PROCESSING FUNCTION:
 def process_data():
     # Storing Current Data Retrieved from Sensor:
     angles = wm.get_angle()
     accels = wm.get_acceleration()
     time1 = time.time() - start_time
 
-    # Exit code if either sensor is not configured properly and returns 'none'
+    # Exit code if either sensor is not configured properly and returns 'none':
     if angles[0] == 'none':
         print('No Angles sensed on wired sensor')
     elif accels[0] == 'none':
         print('No acceleration secret_key from wired sensor')
     else:
-        # Pausing to cChange Collection Frequency:
+        # Pausing to Change Collection Frequency:
         time.sleep(0.005)
 
         # Appending Current Data to Lists of Previous Data Points:
@@ -65,7 +65,7 @@ def process_data():
 
 # FUNCTION TO UPDATE REAL-TIME GRAPH:
 def update_plot(frame):
-    process_data()  # beginning secret_key processing
+    process_data()  # start processing
     plt.cla()  # clearing plot
 
     # Plotting Acceleration Values:
@@ -79,10 +79,9 @@ def update_plot(frame):
     plt.legend()
 
 
-# FUNCTION TO STORE COLLECTED DATA IN CSV FILE:
 def on_close_plot(event):
     # Writing the Collected Data to a CSV File:
-    with open(CNC_DATAFILE, mode='a') as IMU_SenorData:  # NOTE - CHANGE TO USER-SPECIFIC FILENAMES/PATHS
+    with open(CNC_DATAFILE, mode='a') as IMU_SenorData:
         fieldnames = ['TimeStamp',
                       'AngleX', 'AngleY', 'AngleZ', 'AccelerationX', 'AccelerationY',
                       'AccelerationZ']  # headings for columns within csv file

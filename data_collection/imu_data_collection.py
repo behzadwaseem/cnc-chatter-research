@@ -15,9 +15,7 @@ wm = IMU(IMU_PORT, baudrate=BAUDRATE)  # NOTE - CHANGE COM PORT & BAUDRATE TO SY
 # wm = IMU(BT_PORT, baudrate=BT_BAUDRATE)  # use this for bluetooth sensor
 
 
-# SENSOR INITIALIZATION & CALIBRATION FUNCTION:
 def calibrate_sensor():
-
     # Calibrating Sensors:
     wm.set_gyro_automatic_calibration(True)
     wm.set_calibration_mode(witmotion.protocol.CalibrationMode(1))
@@ -30,9 +28,7 @@ def calibrate_sensor():
         time.sleep(1)  # pause to let sensors calibrate
 
 
-# DATA COLLECTION & RECORDING FUNCTION:
 def record_data():
-
     # Appending Sensor Data to CSV File:
     with open(CSV_DIRECTORY, mode='a') as IMU_SenorData:
 

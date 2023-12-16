@@ -4,8 +4,8 @@ import time
 import csv
 
 
-CSV_DIRECTORY = ""  # change to directory of csv file
-IMU_PORT = ''  # change to system-specific port
+CSV_DIRECTORY = "c:/Users/95791/Downloads/allValues/cut.csv"  # change to directory of csv file
+IMU_PORT = 'COM5'  # change to system-specific port
 BAUDRATE = 115200  # change to imu-specific baudrate
 # BT_PORT = ''
 # BT_BAUDRATE = 115200
@@ -39,6 +39,8 @@ def record_data():
 
         start_time = time.time()  # recording program's start time
 
+        printCounter = 0  # we only print time elapsed once every 100 times
+
         # MAIN LOOP FOR COLLECTING & STORING SENSOR DATA
         while True:
             try:
@@ -57,7 +59,10 @@ def record_data():
                     print('No acceleration secret_key from wired sensor')
                     break
                 else:
-                    print(time1)  # printing current time since program began running
+                    if printCounter % 100 == 0:
+                        print(time1)  # printing current time since program began running
+                        printCounter = 0
+                    printCounter += 1
 
                     # Storing Sensor Data:
                     data_dict = {'TimeStamp': time1,

@@ -8,4 +8,4 @@ pip install matplotlib
 pip install numpy  
 pip install pandas  
 pip install scipy  
-pip install pyarrow  
+pip install pyarrow

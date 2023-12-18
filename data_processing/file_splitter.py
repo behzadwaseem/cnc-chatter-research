@@ -7,6 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # TODO: add ability to make a picture for each graph
+# TODO: change how to find splits, maybe max window and then moving average?
 # if a function returns <0, that means it has not completed its task
 # if a function returns 0, it has completed successfully
 
@@ -35,9 +36,12 @@ URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sh
 
 # for splitting the files
 DATA_COLLECTION_RATE_HZ = 200  # data collection rate
-SLIDING_WINDOW_SIZE = 50
+SLIDING_MAX_SIZE = 300  # the width of the window used for the max data
+SLIDING_MIN_SIZE = 600  # the width of the window used for the min data, must be larger than the max size
 MIN_CUT_TIME_SECONDS = 4  # the minimum amount of time that a cut needs to be
 MIN_MOVE_TIME_SECONDS = 1  # the minimum amount of time that it takes to move to the next cut
+CUT_THRESHOLD_Y = 0.2  # the threshold for determining when a cut starts and ends
+CUT_THRESHOLD_Z = 0.25  # the threshold for determining when a cut starts and ends
 
 
 # will be initialized when the splits are calculated
@@ -51,68 +55,92 @@ csvData = pd.DataFrame()
 curFileNumber = -1  # the current file number that we are reading (will be given a value later)
 
 
+# processes the data in a way to make file splitting easier
+def processFileForSplitting():
+    global SLIDING_MAX_SIZE, SLIDING_MIN_SIZE
+
+    # add columns containing the absolute values of the y and z axis
+    # we don't use the x-axis due to its unreliable data due to how the sensor is mounted on the CNC
+    csvData["absY"] = (csvData["rawY"] - csvData["rawY"].median()).abs()
+    csvData["absZ"] = (csvData["rawZ"] - csvData["rawZ"].median()).abs()
+
+    # add columns containing the max value of the absolute data in a sliding window (reduce noise)
+    csvData["maxY"] = csvData["absY"].rolling(SLIDING_MAX_SIZE, 1, center=True).max()
+    csvData["maxZ"] = csvData["absZ"].rolling(SLIDING_MAX_SIZE, 1, center=True).max()
+
+    csvData["minY"] = csvData["maxY"].rolling(SLIDING_MIN_SIZE, 1, center=True).min()
+    csvData["minZ"] = csvData["maxZ"].rolling(SLIDING_MIN_SIZE, 1, center=True).min()
+
+
 # calculates where to split the files based on the max window data
 def addFileSplits():
-    global DATA_COLLECTION_RATE_HZ
-    medianY = csvData["maxY"].quantile(0.5)
-    tenthY = csvData["maxY"].quantile(0.1)
-    medianZ = csvData["maxZ"].quantile(0.5)
-    tenthZ = csvData["maxZ"].quantile(0.1)
+    global MIN_CUT_TIME_SECONDS, MIN_MOVE_TIME_SECONDS, DATA_COLLECTION_RATE_HZ, SLIDING_MIN_SIZE, SLIDING_MAX_SIZE, CUT_THRESHOLD_Z
 
-    upperY = max(medianY / 50 + tenthY, 0.4)
-    lowerY = min(max(splitBounds["upperY"] / 1.3, medianY / 60 + tenthY), 0.3)
-    upperZ = max(medianZ / 50 + tenthZ, 0.4)
-    lowerZ = min(max(splitBounds["upperZ"] / 1.3, medianZ / 60 + tenthZ), 0.3)
+    # first we process the data
+    processFileForSplitting()
 
-    splitBounds["upperY"] = upperY
-    splitBounds["lowerY"] = lowerY
-    splitBounds["upperZ"] = upperZ
-    splitBounds["lowerZ"] = lowerZ
-
-    writingToFile = False
     minCutLen = MIN_CUT_TIME_SECONDS * DATA_COLLECTION_RATE_HZ
     minMoveLen = MIN_MOVE_TIME_SECONDS * DATA_COLLECTION_RATE_HZ
+
+    writingToFile = False
+
+    # line index is the current line we're reading from data
     curCutLen, curNoCutLen, lastCutIndex, lineIndex = 0, 0, 0, 0
-    fileLen = len(csvData["maxY"])
-    interval = 50  # how many lines we skip each time, decrease for better accuracy
+    interval = 50  # how many lines we skip each time
+    fileLen = len(csvData["minY"])
 
     while lineIndex < fileLen:
         backIndex = lineIndex - 1
+        curY = csvData["minY"][lineIndex]
+        curZ = csvData["minZ"][lineIndex]
+
         if not writingToFile:
             curNoCutLen += interval
-            if csvData["maxY"][lineIndex] >= upperY or csvData["maxZ"][lineIndex] >= upperZ:
+
+            # if the slope is large enough, we likely have reached a cut
+            if curY > CUT_THRESHOLD_Y and curZ > CUT_THRESHOLD_Z:
                 writingToFile = True
 
-                # since we only check 1 value every 50 lines, when something changes, we backtrack to find
-                # a more accurate value
-                while csvData["maxY"][backIndex] >= upperY or csvData["maxZ"][backIndex] >= upperZ:
+                # since we skip lines to make processing faster, we check
+                # backwards to find exactly when the threshold was crossed
+                while csvData["minY"][backIndex] > CUT_THRESHOLD_Y and csvData["minZ"][backIndex] > CUT_THRESHOLD_Z:
                     backIndex -= 1
                 backIndex += 1
 
+                # if we haven't moved for long enough, it's likely we split in the middle of the cut
+                # we just go back to the start of the previous cut
                 if curNoCutLen - lineIndex + backIndex < minMoveLen:
                     fileSplitIndexes.append(lastCutIndex)
+
+                # if this is a new cut
                 else:
                     fileSplitIndexes.append(backIndex)
                     lastCutIndex = backIndex
                     curCutLen = lineIndex - backIndex
         else:
             curCutLen += interval
-            if csvData["maxY"][lineIndex] <= lowerY and csvData["maxZ"][lineIndex] <= lowerZ:
+
+            if curY < CUT_THRESHOLD_Y and curZ < CUT_THRESHOLD_Z:
                 writingToFile = False
 
-                # since we only check 1 value every 50 lines, when something changes, we backtrack to find
-                # a more accurate value
-                while csvData["maxY"][backIndex] <= lowerY and csvData["maxZ"][backIndex] <= lowerZ:
+                # since we skip lines to make processing faster, we check
+                # backwards to find exactly when the threshold was crossed
+                while csvData["minY"][backIndex] < CUT_THRESHOLD_Y and csvData["minZ"][backIndex] < CUT_THRESHOLD_Z:
                     backIndex -= 1
                 backIndex += 1
 
+                # if the cut was long enough and it ended
                 if curCutLen - lineIndex + backIndex >= minCutLen:
-                    fileSplitIndexes.append(backIndex - SLIDING_WINDOW_SIZE)
+                    fileSplitIndexes.append(backIndex)
+                    curNoCutLen = lineIndex - backIndex
+
+                # if the cut is too short, it is likely not a cut
                 else:
                     fileSplitIndexes.pop()
+                    curNoCutLen += lineIndex - lastCutIndex
+                curCutLen = 0
 
         lineIndex += interval
-
     return 0
 
 
@@ -186,7 +214,7 @@ def resetForNewFile():
 
 
 def main():
-    global csvData, SLIDING_WINDOW_SIZE, curFileNumber
+    global csvData, curFileNumber
 
     shouldCreateNewFiles = input("do you want to split the files? (y/n)") == 'y'
     print(f"creating new files has been set to {shouldCreateNewFiles}")
@@ -206,34 +234,26 @@ def main():
             # the format for the raw data in the 15cut files is time, angleX, angleY, angleZ, accelX, accelY, accelZ
             csvData.columns.values[0:7] = ["timeStamp", "angleX", "angleY", "angleZ", "rawX", "rawY", "rawZ"]
 
-            # add columns containing the absolute values of the y and z axis
-            # we don't use the x-axis due to its unreliable data due to how the sensor is mounted on the CNC
-            csvData["absY"] = (csvData["rawY"] - csvData["rawY"].median()).abs()
-            csvData["absZ"] = (csvData["rawZ"] - csvData["rawZ"].median()).abs()
-
-            # add columns containing the max value of the absolute data in a sliding window (reduce noise)
-            csvData["maxY"] = csvData["absY"].rolling(SLIDING_WINDOW_SIZE, 1).max()
-            csvData["maxZ"] = csvData["absZ"].rolling(SLIDING_WINDOW_SIZE, 1).max()
-
             # find where to split the files
             addFileSplits()
-
-            csvData[["absY", "absZ"]].plot()
+            csvData[["absZ", "minZ", "minY"]].plot()
 
             plt.axhline(y=0, color="r")  # centerline
-            plt.axhline(y=splitBounds["lowerY"], color="b")  # lower bounds for file splitting
+            plt.axhline(y=csvData["minY"].quantile(0.3), color="b")  # lower bounds for file splitting
             plt.axhline(y=splitBounds["upperY"], color="g")  # upper bounds for file splitting
-            for fileIndex in fileSplitIndexes:
-                plt.axvline(x=fileIndex, color="k")
+
+            # the amount of cuts that were found when splitting
+            cutCount = int(len(fileSplitIndexes) / 2)
+
+            # show the areas that are considered cuts
+            for i in range(cutCount):
+                plt.axvspan(fileSplitIndexes[i*2], fileSplitIndexes[i*2+1], color='y', alpha=0.5, lw=0)
 
             plt.show()
 
             if not shouldCreateNewFiles:
                 resetForNewFile()
                 continue
-
-            # the amount of cuts that were found when splitting
-            cutCount = int(len(fileSplitIndexes)/2)
 
             print(f"there were {cutCount} different cuts in this file")
             if input("use this data? (y/n)") == 'n':
@@ -258,7 +278,6 @@ def main():
                         print("you cannot specify the same cut multiple times")
                     elif result == -4:
                         print(f"you specified a cut that was outside of the range 1 to {cutCount}")
-
 
             splitFile()
             print("splitting completed")

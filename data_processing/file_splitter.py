@@ -1,13 +1,13 @@
-###################################################################
-# this program was made with the Windows 10/11 file paths in mind #
-###################################################################
+######################################################################
+# this program was made with the Windows 10/11 OS file paths in mind #
+######################################################################
 
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# TODO: add ability to make a picture for each graph
-# TODO: change how to find splits, maybe max window and then moving average?
+# TODO: add ability to make a picture for each graph and automatically add it to spreadsheet
+
 # if a function returns <0, that means it has not completed its task
 # if a function returns 0, it has completed successfully
 
@@ -23,7 +23,6 @@ WRITE_PATH = "c:/Users/95791/Downloads/outputValues"
 
 
 # only change if you are changing to a different Google sheet document
-
 # this is the part after /d/ and before /edit# in the actual url
 SHEET_ID = "1aSEPSUfnHy27OzyU4448njNlq4DLVYU2zhpW1fhJrA0"
 
@@ -71,9 +70,11 @@ def processFileForSplitting():
     csvData["minY"] = csvData["maxY"].rolling(SLIDING_MIN_SIZE, 1, center=True).min()
     csvData["minZ"] = csvData["maxZ"].rolling(SLIDING_MIN_SIZE, 1, center=True).min()
 
+    csvData["testY"] = csvData["minY"].rolling(SLIDING_MIN_SIZE*3, 1, center=True).mean()
+
 
 # calculates where to split the files based on the max window data
-def addFileSplits():
+def findFileSplits():
     global MIN_CUT_TIME_SECONDS, MIN_MOVE_TIME_SECONDS, DATA_COLLECTION_RATE_HZ, SLIDING_MIN_SIZE, SLIDING_MAX_SIZE, CUT_THRESHOLD_Z
 
     # first we process the data
@@ -150,7 +151,7 @@ def splitFile():
     differentCutCount = int(len(fileSplitIndexes) / 2)
     csvData.drop(csvData.columns[[7, 8, 9, 10]], axis=1, inplace=True)  # we only want raw sensor data
 
-    # get information from the Google sheet
+    # get information from the Google sheet (remove the first 2 rows which only contain labels)
     chatterData = pd.read_csv(URL).iloc[1:]
 
     # make the two folders for storing the two types of cuts
@@ -219,10 +220,15 @@ def main():
     shouldCreateNewFiles = input("do you want to split the files? (y/n)") == 'y'
     print(f"creating new files has been set to {shouldCreateNewFiles}")
 
+    # check every file in the READ_PATH folder
     for root, dirs, files in os.walk(READ_PATH):
         for file in files:
+
+            # if the file is not a csv, we ignore it
             if not file.endswith(".csv"): continue
 
+            # if we are creating new files, we will need data from
+            # the Google sheet and the cut number
             if shouldCreateNewFiles:
                 temp = file.split("_")
                 curFileNumber = int(temp[len(temp)-1].split(".")[0])
@@ -235,12 +241,12 @@ def main():
             csvData.columns.values[0:7] = ["timeStamp", "angleX", "angleY", "angleZ", "rawX", "rawY", "rawZ"]
 
             # find where to split the files
-            addFileSplits()
-            csvData[["absZ", "minZ", "minY"]].plot()
+            findFileSplits()
+            csvData[["absZ", "minZ", "minY", "testY"]].plot()
 
             plt.axhline(y=0, color="r")  # centerline
             plt.axhline(y=csvData["minY"].quantile(0.3), color="b")  # lower bounds for file splitting
-            plt.axhline(y=splitBounds["upperY"], color="g")  # upper bounds for file splitting
+            plt.axhline(y=csvData["testY"].median(), color="g")  # upper bounds for file splitting
 
             # the amount of cuts that were found when splitting
             cutCount = int(len(fileSplitIndexes) / 2)

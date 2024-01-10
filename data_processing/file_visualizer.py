@@ -45,7 +45,6 @@ CUT_THRESHOLD_Z = 0.25  # the threshold for determining when a cut starts and en
 
 
 # will be initialized when the splits are calculated
-splitBounds = {"upperY": 0.0, "lowerY": 0.0, "upperZ": 0.0, "lowerZ": 0.0}
 fileSplitIndexes = []  # where to split the current 15cut file
 chatterFileCount = 0  # how many files for chatter we've made
 noChatterFileCount = 0  # how many files for no chatter we've made
@@ -61,15 +60,8 @@ def processFileForSplitting():
 
     # add columns containing the absolute values of the y and z axis
     # we don't use the x-axis due to its unreliable data due to how the sensor is mounted on the CNC
-    csvData["absY"] = (csvData["rawY"] - csvData["rawY"].median()).abs()
-    csvData["absZ"] = (csvData["rawZ"] - csvData["rawZ"].median()).abs()
-
-    # add columns containing the max value of the absolute data in a sliding window (reduce noise)
-    csvData["maxY"] = csvData["absY"].rolling(SLIDING_MAX_SIZE, 1, center=True).max()
-    csvData["maxZ"] = csvData["absZ"].rolling(SLIDING_MAX_SIZE, 1, center=True).max()
-
-    csvData["minY"] = csvData["maxY"].rolling(SLIDING_MIN_SIZE, 1, center=True).min()
-    csvData["minZ"] = csvData["maxZ"].rolling(SLIDING_MIN_SIZE, 1, center=True).min()
+    csvData["adjustedY"] = csvData["rawY"] - csvData["rawY"].median()
+    csvData["adjustedZ"] = csvData["rawZ"] - csvData["rawZ"].median()
 
 
 # calculates where to split the files based on the max window data
@@ -235,12 +227,11 @@ def main():
             csvData.columns.values[0:7] = ["timeStamp", "angleX", "angleY", "angleZ", "rawX", "rawY", "rawZ"]
 
             # find where to split the files
-            addFileSplits()
-            csvData[["absZ", "minZ", "minY"]].plot()
+            processFileForSplitting()
+            #addFileSplits()
+            csvData[["adjustedY", "adjustedZ"]].plot()
 
             plt.axhline(y=0, color="r")  # centerline
-            plt.axhline(y=CUT_THRESHOLD_Y, color="b")  # bounds for file splitting
-            plt.axhline(y=CUT_THRESHOLD_Z, color="g")  # bounds for file splitting
 
             # the amount of cuts that were found when splitting
             cutCount = int(len(fileSplitIndexes) / 2)

@@ -4,7 +4,7 @@ import time
 import csv
 
 
-CSV_DIRECTORY = "c:/Users/95791/Downloads/allValues/cut.csv"  # change to directory of csv file
+CSV_DIRECTORY = "c:/Users/95791/Downloads/inputValues/cut.csv"  # change to directory of csv file
 IMU_PORT = 'COM5'  # change to system-specific port
 BAUDRATE = 115200  # change to imu-specific baudrate
 # BT_PORT = ''

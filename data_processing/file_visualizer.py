@@ -31,7 +31,7 @@ SHEET_NAME = "GoodEndMill"  # or "BadEndMill"
 CUT_DATA_RANGE = "E:S"  # columns e to s (the columns that contain the chatter information)
 
 # do not change this, it will stay the same across different google sheets
-URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&range={CUT_DATA_RANGE}"
+URL_GOOD = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&range={CUT_DATA_RANGE}"
 
 
 # for splitting the files
@@ -51,7 +51,7 @@ noChatterFileCount = 0  # how many files for no chatter we've made
 
 # holds the processed data
 csvData = pd.DataFrame()
-curFileNumber = -1  # the current file number that we are reading (will be given a value later)
+curFileNum = -1  # the current file number that we are reading (will be given a value later)
 
 
 # processes the data in a way to make file splitting easier
@@ -138,7 +138,7 @@ def addFileSplits():
 
 # creates the new cut files in the WRITE_PATH folder
 def splitFile():
-    global URL, curFileNumber, chatterFileCount, noChatterFileCount
+    global URL_GOOD, curFileNum, chatterFileCount, noChatterFileCount
     differentCutCount = int(len(fileSplitIndexes) / 2)
     csvData.drop(csvData.columns[[7, 8, 9, 10, 11, 12]], axis=1, inplace=True)  # we only want raw sensor data
 
@@ -206,7 +206,7 @@ def resetForNewFile():
 
 
 def main():
-    global csvData, curFileNumber
+    global csvData, curFileNum
 
     shouldCreateNewFiles = input("do you want to split the files? (y/n)") == 'y'
     print(f"creating new files has been set to {shouldCreateNewFiles}")

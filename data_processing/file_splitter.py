@@ -7,9 +7,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # TODO: add ability to make a picture for each graph
-# TODO: change how to find splits, maybe max window and then moving average?
-# if a function returns <0, that means it has not completed its task
-# if a function returns 0, it has completed successfully
+# TODO: improve the algorithm to detect when cuts happen
+# TODO: multithread so that the user can see the graph while choosing if the data is good
 
 
 # this is the ABSOLUTE path of the FOLDER that the program will read from. Place any 15cut csv
@@ -98,7 +97,7 @@ def addFileSplits():
         if not writingToFile:
             curNoCutLen += interval
 
-            # if the slope is large enough, we likely have reached a cut
+            # if the value is large enough, we may have reached a cut
             if curY > CUT_THRESHOLD_Y and curZ > CUT_THRESHOLD_Z:
                 writingToFile = True
 
@@ -108,8 +107,9 @@ def addFileSplits():
                     backIndex -= 1
                 backIndex += 1
 
-                # if we haven't moved for long enough, it's likely we split in the middle of the cut
-                # we just go back to the start of the previous cut
+                # if we haven't moved for long enough without cutting
+                # it's likely we split in the middle of the cut
+                # we just go back to the start of the previous cut and continue cutting
                 if curNoCutLen - lineIndex + backIndex < minMoveLen:
                     fileSplitIndexes.append(lastCutIndex)
 
@@ -276,7 +276,7 @@ def main():
 
             print(input("press enter to see " + file))
 
-            # pyarrow is slightly faster but not required
+            # pyarrow is slightly faster but not required, just delete the second parameter to use default
             csvData = pd.read_csv(READ_PATH + "/" + file, engine="pyarrow")
 
             # the format for the raw data in the 15cut files is time, angleX, angleY, angleZ, accelX, accelY, accelZ
@@ -294,24 +294,34 @@ def main():
             for i in range(cutCount):
                 plt.axvspan(fileSplitIndexes[i*2], fileSplitIndexes[i*2+1], color='y', alpha=0.5, lw=0)
 
+            print(f"there are {cutCount} different cuts in this file")
+
+            # create the new window
             plt.show()
 
             if not shouldCreateNewFiles:
                 resetForNewFile()
                 continue
 
-            print(f"there were {cutCount} different cuts in this file")
-            if input("use this data? (y/n)") == 'n':
+            # user splitting
+            if input("save this data? (y/n)") == 'n':
                 resetForNewFile()
                 continue
 
             print("you have chosen to use the data")
 
-            if cutCount > 15:
-                print("remove extra cuts (make sure 15 cuts remain) cut index starts at 1")
+            if cutCount != 15:
+                if cutCount > 15:
+                    print("remove extra cuts (make sure 15 cuts remain) cut index starts at 1")
+                else:
+                    print("please add missing cuts (make sure 15 cuts remain) cut index starts at 1")
+                    print("missing cuts must be black on the spreadsheet")
 
                 while True:
-                    result = removeSplit(input("type the cut numbers to remove separated by a space (e.g. 1 2 5)"))
+                    if cutCount > 15:
+                        result = removeSplit(input("type the cut numbers to remove separated by a space (e.g. 1 2 5)"))
+                    else:
+                        result = addSplit(input("type the cut numbers to add separated by a space (e.g. 1 2 5)"))
 
                     if result == 0:
                         break
@@ -322,25 +332,7 @@ def main():
                     elif result == -3:
                         print("you cannot specify the same cut multiple times")
                     elif result == -4:
-                        print(f"you specified a cut that was outside of the range 1 to {cutCount}")
-
-            if cutCount < 15:
-                print("please add missing cuts (make sure 15 cuts remain) cut index starts at 1")
-                print("missing cuts must be black on the spreadsheet")
-
-                while True:
-                    result = addSplit(input("type the cut numbers to add separated by a space (e.g. 1 2 5)"))
-
-                    if result == 0:
-                        break
-                    elif result == -1:
-                        print("you can only enter numbers separated by spaces")
-                    elif result == -2:
-                        print("you specified the wrong amount of cuts. 15 cuts must remain")
-                    elif result == -3:
-                        print("you cannot specify the same cut multiple times")
-                    elif result == -4:
-                        print(f"you specified a cut that was outside of the range 1 to 15")
+                        print(f"you specified a cut that was outside of the range 1 to {max(cutCount,15)}")
 
             splitFile()
             print("splitting completed")

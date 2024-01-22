@@ -67,7 +67,7 @@ def processDataToSplit():
     csvData["absY"] = csvData["centeredY"].abs()
     csvData["absZ"] = csvData["centeredZ"].abs()
 
-    # add columns containing the max value of the absolute data in a sliding window (reduce noise)
+    # reducing noise
     csvData["rollingY"] = csvData["absY"].rolling(SLIDING_MAX_SIZE, 1, center=True).max().rolling(SLIDING_MIN_SIZE, 1, center=True).min()
     csvData["rollingZ"] = csvData["absZ"].rolling(SLIDING_MAX_SIZE, 1, center=True).max().rolling(SLIDING_MIN_SIZE, 1, center=True).min()
 

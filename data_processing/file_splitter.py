@@ -32,19 +32,19 @@ CUT_DATA_RANGE = "E:S"  # columns e to s (the columns that contain the chatter i
 # do not change this, only change the variables within this string
 URL_GOOD = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME_GOOD}&range={CUT_DATA_RANGE}"
 URL_BAD = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME_BAD}&range={CUT_DATA_RANGE}"
-SHEET_DATA_GOOD = pd.read_csv(URL_GOOD).iloc[1:]
-SHEET_DATA_BAD = pd.read_csv(URL_BAD).iloc[1:]
+SHEET_DATA_GOOD = pd.read_csv(URL_GOOD).iloc[1:]  # good end mill
+SHEET_DATA_BAD = pd.read_csv(URL_BAD).iloc[1:]  # bad end mill
 isCurrentFileGood = None  # will be change initialized once files are being read
 curFileNum = -1  # the number at the end of the 15cut file
 
 # for splitting the files
 DATA_COLLECTION_RATE_HZ = 200  # data collection rate
-SLIDING_MAX_SIZE = 300  # the width of the window used for the max data
-SLIDING_MIN_SIZE = 600  # the width of the window used for the min data, must be larger than the max size
-MIN_CUT_TIME_SECONDS = 4  # the minimum amount of time that a cut needs to be
-MIN_MOVE_TIME_SECONDS = 1  # the minimum amount of time that it takes to move to the next cut
-CUT_THRESHOLD_Y = 0.2  # the threshold for determining when a cut starts and ends (m/s^2)
-CUT_THRESHOLD_Z = 0.25  # the threshold for determining when a cut starts and ends (m/s^2)
+SLIDING_MAX_SIZE = 300  # the width of the window used for the max data (default is 300)
+SLIDING_MIN_SIZE = 600  # the width of the min data window, must be larger than the max size (default is 600)
+MIN_CUT_TIME_SECONDS = 4  # the minimum amount of time that a cut needs to be (default is 4)
+MIN_MOVE_TIME_SECONDS = 1  # the minimum amount of time that it takes to move to the next cut (default is 1)
+CUT_THRESHOLD_Y = 0.2  # the threshold for determining when a cut starts and ends (m/s^2) (default is 0.2)
+CUT_THRESHOLD_Z = 0.25  # the threshold for determining when a cut starts and ends (m/s^2) (default is 0.25)
 
 
 # will be initialized when the splits are calculated
